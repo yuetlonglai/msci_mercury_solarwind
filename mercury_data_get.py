@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 # web crawling to find out when was helios near the mercury orbit
 years = ['1974', '1975', '1976', '1977', '1978', '1979', '1980', '1981']
@@ -24,8 +25,17 @@ for year in years:
 
 df_total = df_total.apply(pd.to_numeric, errors='coerce')
 # print(df_total)
-extraction_days = df_total[(df_total['rh'] < 0.47) & (df_total['rh'] > 0.31)][['year','day','hour','rh']]
-print(extraction_days)
+extraction_day_hours = df_total[(df_total['min'] < 0.47) & (df_total['min'] > 0.31)][['year','day','hour','min']]
+extraction_day = np.array(df_total[(df_total['min'] < 0.47) & (df_total['min'] > 0.31)][['year','day']])
+# print(extraction_day)
+# # Convert each sublist to a tuple and use set() to get unique tuples
+extraction_day_unique = set(tuple(sublist) for sublist in extraction_day)
+# # Convert the unique tuples back to lists
+extraction_day_unique = [list(t) for t in extraction_day_unique]
+# print(extraction_day_unique)
+
+    
+
 
 
 # found out when helios was near mercury, now extract high cadance data
@@ -37,7 +47,7 @@ high_cadance_columns = [
     'Tal', 'np2', 'vp2'
 ]
 
-for i in extraction_days.values:
+for i in extraction_day_unique:
     if i[1] < 10.0:
         url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios1/merged/he1_40sec/H1{int(i[0]-1900)}_00{int(i[1])}.dat"
     elif i[1] < 100.0:
@@ -55,17 +65,17 @@ for i in extraction_days.values:
         df = pd.DataFrame(data, columns=high_cadance_columns)  # Exclude "year" column
         # print(df)
         df = df.drop(0, axis = 0)
-        # df = df[(df['hour'].astype(float) == float(i[2]))] # select the correct hours in the day
 
         df_all = pd.concat([df_all, df], ignore_index=True)
     else:
-        # print("Request Unsuccessful : \n" + str(url))
+        print("Request Unsuccessful : \n" + str(url))
         continue
 
 df_all = df_all.apply(pd.to_numeric, errors = 'coerce')
-print(df_all)
 
-# visualise the rh data to check if we got it 
-plt.figure()
-plt.plot(df_all['rh'],'.')
-plt.show()
+# for j in range(len(df_all)):
+#     df_all = df_all[(df_all['hour'] == )]
+
+print(df_all)
+df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data.csv') #change path for different computer
+
