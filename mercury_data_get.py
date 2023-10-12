@@ -10,7 +10,7 @@ col_names = ["year", "day", "hour","dechr", "min", "sec", "rh", "esh", "clong", 
 df_total = pd.DataFrame([])
 
 for year in years:
-    url = f'https://spdf.gsfc.nasa.gov/pub/data/helios/helios1/merged/he1_{year}.asc'
+    url = f'https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_{year}.asc'
     response = requests.get(url)
 
     if response.status_code == 200:  # Check if the request was successful
@@ -22,6 +22,8 @@ for year in years:
         df = pd.DataFrame(data, columns=col_names)  # Exclude "year" column
 
         df_total = pd.concat([df_total, df], ignore_index=True)
+    else:
+        print("Request Unsuccessful: \n" +str(url))
 
 df_total = df_total.apply(pd.to_numeric, errors='coerce')
 # print(df_total)
@@ -49,11 +51,11 @@ high_cadance_columns = [
 
 for i in extraction_day_unique:
     if i[1] < 10.0:
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios1/merged/he1_40sec/H1{int(i[0]-1900)}_00{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_00{int(i[1])}.dat"
     elif i[1] < 100.0:
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios1/merged/he1_40sec/H1{int(i[0]-1900)}_0{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_0{int(i[1])}.dat"
     else: 
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios1/merged/he1_40sec/H1{int(i[0]-1900)}_{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_{int(i[1])}.dat"
     response = requests.get(url)
 
     if response.status_code == 200:  # Check if the request was successful
@@ -77,5 +79,5 @@ df_all = df_all.apply(pd.to_numeric, errors = 'coerce')
 #     df_all = df_all[(df_all['hour'] == )]
 
 print(df_all)
-df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data.csv') #change path for different computer
+df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_2.csv') #change path for different computer
 
