@@ -10,7 +10,8 @@ from scipy import interpolate
 
 
 # load data
-df = pd.read_csv('mercury_data_2_clean.csv')
+craft_num = 0
+df = pd.read_csv(f'mercury_data_{craft_num}_clean.csv')
 # some more cleaning
 df = df.drop('Unnamed: 0', axis=1)
 df['datetime'] = pd.to_datetime(df['datetime'])
