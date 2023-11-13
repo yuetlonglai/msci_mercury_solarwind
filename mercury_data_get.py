@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
+craft_num = 1
 # web crawling to find out when was helios near the mercury orbit
 years = ['1974', '1975', '1976', '1977', '1978', '1979', '1980', '1981']
 # col_names = ["year", "day", "hour","elapsed_hour","dechr", "min", "sec", "rh", "esh", "clong", "clat", "HGIlong", "br", "bt", "bn", "vp1r", "vp1t", "vp1n", "crot", "np1", "vp1", "Tp1", "vaz", "vel", "Bx", "By", "Bz", "sBx", "sBy", "sBz", "nal", "val"]
@@ -10,7 +11,7 @@ col_names = ["year", "day", "hour","dechr", "min", "sec", "rh", "esh", "clong", 
 df_total = pd.DataFrame([])
 
 for year in years:
-    url = f'https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_{year}.asc'
+    url = f'https://spdf.gsfc.nasa.gov/pub/data/helios/helios{craft_num}/merged/he{craft_num}_{year}.asc'
     response = requests.get(url)
 
     if response.status_code == 200:  # Check if the request was successful
@@ -27,8 +28,8 @@ for year in years:
 
 df_total = df_total.apply(pd.to_numeric, errors='coerce')
 # print(df_total)
-extraction_day_hours = df_total[(df_total['min'] < 0.47) & (df_total['min'] > 0.31)][['year','day','hour','min']]
-extraction_day = np.array(df_total[(df_total['min'] < 0.47) & (df_total['min'] > 0.31)][['year','day']])
+extraction_day_hours = df_total[(df_total['min'] <= 0.47) & (df_total['min'] >= 0.31)][['year','day','hour','min']]
+extraction_day = np.array(df_total[(df_total['min'] <= 0.47) & (df_total['min'] >= 0.31)][['year','day']])
 # print(extraction_day)
 # # Convert each sublist to a tuple and use set() to get unique tuples
 extraction_day_unique = set(tuple(sublist) for sublist in extraction_day)
@@ -51,11 +52,11 @@ high_cadance_columns = [
 
 for i in extraction_day_unique:
     if i[1] < 10.0:
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_00{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios{craft_num}/merged/he{craft_num}_40sec/H{craft_num}{int(i[0]-1900)}_00{int(i[1])}.dat"
     elif i[1] < 100.0:
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_0{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios{craft_num}/merged/he{craft_num}_40sec/H{craft_num}{int(i[0]-1900)}_0{int(i[1])}.dat"
     else: 
-        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios2/merged/he2_40sec/H2{int(i[0]-1900)}_{int(i[1])}.dat"
+        url = f"https://spdf.gsfc.nasa.gov/pub/data/helios/helios{craft_num}/merged/he{craft_num}_40sec/H{craft_num}{int(i[0]-1900)}_{int(i[1])}.dat"
     response = requests.get(url)
 
     if response.status_code == 200:  # Check if the request was successful
@@ -79,5 +80,5 @@ df_all = df_all.apply(pd.to_numeric, errors = 'coerce')
 #     df_all = df_all[(df_all['hour'] == )]
 
 print(df_all)
-df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_2.csv') #change path for different computer
+df_all.to_csv(f'/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_{craft_num}.csv') #change path for different computer
 

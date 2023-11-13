@@ -26,7 +26,7 @@ df_select = df[(df['datetime'] >= begin) & (df['datetime'] <= end)]
 
 # histogram
 # select year (for likelihood)
-df = df[(df['year'] == 1975) & (df['rh'] <= 0.33)]
+df = df[(df['year'] == 1981) & (df['rh'] <= 0.33)]
 # low_thresh = 1e-9
 # high_thresh = 7e-8
 low_thresh = df['Pram'].mean() - 1.5 * df['Pram'].std()
