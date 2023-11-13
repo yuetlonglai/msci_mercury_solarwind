@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # load saved csv
-df_all = pd.read_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_2.csv')
+df_all = pd.read_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_1.csv')
 # drop useless column
 df_all = df_all.drop('Unnamed: 0',axis=1)
 # convert year + day into datetime format
@@ -23,9 +23,9 @@ high_cadance_columns = [
 ]
 df_all = pd.DataFrame(df_all,columns=high_cadance_columns)
 # filter using rh conditions again
-df_all = df_all[(df_all['rh'] < 0.47) & (df_all['rh'] > 0.31)]
+df_all = df_all[(df_all['rh'] <= 0.47) & (df_all['rh'] >= 0.31)]
 print(df_all)
-df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_2_clean.csv')
+df_all.to_csv('/Users/gordonlai/Documents/ICL/ICL_Y4/MSci_Mercury/msci_mercury_solarwind/mercury_data_1_clean.csv')
 
 
 

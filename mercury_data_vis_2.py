@@ -10,7 +10,7 @@ from scipy import interpolate
 
 
 # load data
-craft_num = 0
+craft_num = 2
 df = pd.read_csv(f'mercury_data_{craft_num}_clean.csv')
 # some more cleaning
 df = df.drop('Unnamed: 0', axis=1)
@@ -47,11 +47,12 @@ daily_mean_stats = daily_mean['Pram'].describe() #0:count,1:mean,2:std
 
 plt.figure(figsize=(8,6))
 ax = plt.gca()
+plt.title(f'Helios {craft_num}')
 plt.ylabel(r'$P_{ram}$')
 plt.xlabel('Datetime')
 plt.plot(daily_mean['datetime'],daily_mean['Pram'],'.',color='blue',label='Daily mean '+r'$P_{ram}$')
 # plt.plot(cme_df_mean['datetime'], cme_df_mean['Pram'],'x',color='red', label = 'CME Events')
-plt.hlines(y = daily_mean_stats[1]+2*daily_mean_stats[2],xmin=min(daily_mean['datetime']),xmax=max(daily_mean['datetime']),colors='grey',linestyles='dashed',label=r'$\overline{P}_{ram}+2\sigma$')
+# plt.hlines(y = daily_mean_stats[1]+2*daily_mean_stats[2],xmin=min(daily_mean['datetime']),xmax=max(daily_mean['datetime']),colors='grey',linestyles='dashed',label=r'$\overline{P}_{ram}+2\sigma$')
 ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
 plt.legend(loc='best')
 plt.show()

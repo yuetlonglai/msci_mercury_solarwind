@@ -10,4 +10,4 @@ df2['helios'] = 2
 df_tot = pd.concat([df1,df2])
 df_tot = df_tot.drop('Unnamed: 0',axis=1)
 print(df_tot)
-# df_tot.to_csv('mercury_data_0_clean.csv')
+df_tot.to_csv('mercury_data_0_clean.csv')
