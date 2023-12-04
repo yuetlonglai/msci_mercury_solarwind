@@ -43,7 +43,9 @@ def spread_eval(data):
 
 def plot_subplots_histogram(data,colour,year,den=True):
     # plt.grid()
-    plt.xlabel(r'$P_{ram}$')
+    plt.xlabel(r'$R_{stdoff}$' + r' $(R_M)$')
+    # plt.xlabel('vp1')
+    # plt.xlabel(r'$P_{ram}$')
     plt.ylabel('Count Density')
     if colour == 'blue':
         bin_height,bin_edges,_ = plt.hist(data,bins=500,density=den,alpha=0.7,color=colour,label='Perihelion')
@@ -55,12 +57,13 @@ def plot_subplots_histogram(data,colour,year,den=True):
     plt.vlines(x=spread_eval(data=data)[1],ymin=0,ymax=10e8,color='aqua',linestyles='dashed',label=f'{(low_percentile*100)}th Percentile')
     plt.vlines(x=spread_eval(data=data)[2],ymin=0,ymax=10e8,color='aquamarine',linestyles='dashed',label=f'{(high_percentile*100)}th Percentile')
     plt.legend()
-    plt.xscale('log')
+    # plt.xscale('log')
     # plt.xlim(1.5e-9,1e-7)
+    # plt.xlim(700,1650)
     plt.ylim(0,max(bin_height))
     print('Alpha = %.3e, Beta = %.3e, a+b = %.3e' %(spread_eval(data=data)[-2],spread_eval(data=data)[-1],spread_eval(data=data)[-2]+spread_eval(data=data)[-1]))
 
-plotvariable = 'Pram'
+plotvariable = 'np1'
 
 plt.figure(figsize=(12,8))
 plt.suptitle('Helios 1')
@@ -98,10 +101,10 @@ plt.grid()
 plt.xlabel('Year')
 # plt.ylabel(r'$P_{ram}$')
 plt.ylabel(plotvariable)
-# plt.plot(year_range,alphas_1,'-o',color='deepskyblue',label='Perihelion Alpha')
-# plt.plot(year_range,alphas_2,'-o',color='lightcoral', label='Aphelion Alpha')
-# plt.plot(year_range,betas_1,'-o',color='royalblue',label='Perihelion Beta')
-# plt.plot(year_range,betas_2,'-o',color='salmon',label='Aphelion Beta')
+plt.plot(year_range,alphas_1,'-o',color='deepskyblue',label='Perihelion Alpha')
+plt.plot(year_range,alphas_2,'-o',color='lightcoral', label='Aphelion Alpha')
+plt.plot(year_range,betas_1,'-o',color='royalblue',label='Perihelion Beta')
+plt.plot(year_range,betas_2,'-o',color='salmon',label='Aphelion Beta')
 plt.plot(year_range,np.array(alphas_1)+np.array(betas_1),'-o',color='blue',label='Perihelion Total')
 plt.plot(year_range,np.array(alphas_2)+np.array(betas_2),'-o',color='red',label='Aphelion Total')
 plt.legend(loc='upper right')
@@ -115,6 +118,31 @@ plt.ylabel(r'$P_{ram}$')
 plt.plot(year_range,np.array(median_1)-np.array(median_2),'-o',color='black')
 plt.show()
 
+k_value = 50
+df['Rstdoff'] = k_value * df['Pram']**(-1/6) / 2439.7
+
+plt.figure(figsize=(8,6))
+plt.title('Helios 1')
+plt.xlabel(r'$R_{stdoff}$' + r' $(R_M)$')
+plt.ylabel('Count Density')
+plt.hist(df[df['rh']<=0.33]['Rstdoff'],bins=1000,density=True,alpha=0.7,color='blue',label='Perihelion')
+plt.hist(df[df['rh']>=0.44]['Rstdoff'],bins=1000,density=True,alpha=0.7,color='red',label='Aphelion')
+plt.legend()
+plt.show()
+plotvariable2 = 'Rstdoff'
+plt.figure(figsize=(12,8))
+plt.suptitle('Helios 1')
+plt.subplot(2,2,1)
+plt.title('1975')
+plot_subplots_histogram(df[(df['year'] == 1975) & (df['rh'] <= 0.33)][plotvariable2],colour='blue',year='1975')
+plt.subplot(2,2,2)
+plt.title('1981')
+plot_subplots_histogram(df[(df['year'] == 1981) & (df['rh'] <= 0.33)][plotvariable2],colour='blue',year='1981')
+plt.subplot(2,2,3)
+plot_subplots_histogram(df[(df['year'] == 1975) & (df['rh'] >= 0.44)][plotvariable2],colour='red',year='1975')
+plt.subplot(2,2,4)
+plot_subplots_histogram(df[(df['year'] == 1981) & (df['rh'] >= 0.44)][plotvariable2],colour='red',year='1981')
+plt.show()
 
 
 

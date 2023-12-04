@@ -31,30 +31,31 @@ else:
 # end of prelim
 
 # Calculate daily mean of 'Pram' and store it in a new DataFrame
-# df['date'] = df['datetime'].dt.date
-# daily_mean = df.groupby('date')['Pram'].mean().reset_index()
-# daily_mean['date'] = pd.to_datetime(daily_mean['date'])  # Convert 'date' back to datetime
-# daily_mean['Days_Since_Given_Date'] = (daily_mean['date'] - daily_mean['date'].iloc[0]).dt.days
-# daily_mean_df = pd.concat([daily_mean['Days_Since_Given_Date'],daily_mean['Pram']],axis=1)
+df['date'] = df['datetime'].dt.date
+daily_mean = df.groupby('date')['Pram'].mean().reset_index()
+daily_mean['date'] = pd.to_datetime(daily_mean['date'])  # Convert 'date' back to datetime
+daily_mean['Days_Since_Given_Date'] = (daily_mean['date'] - daily_mean['date'].iloc[0]).dt.days
+daily_mean_df = pd.concat([daily_mean['Days_Since_Given_Date'],daily_mean['Pram']],axis=1)
 
 # Calculate hourly mean of 'Pram' and store it in a new DataFrame
-df['date-hour'] = df['datetime'].dt.strftime('%Y-%m-%d %H')
-daily_mean = df.groupby('date-hour')['Pram'].mean().reset_index()
-daily_mean['date-hour'] = pd.to_datetime(daily_mean['date-hour'])  # Convert 'date' back to datetime
-daily_mean['Hours_Since_Given_Date'] = (daily_mean['date-hour'] - daily_mean['date-hour'].iloc[0]).dt.total_seconds()/3600
-daily_mean_df = pd.concat([daily_mean['Hours_Since_Given_Date'],daily_mean['Pram']],axis=1)
+# df['date-hour'] = df['datetime'].dt.strftime('%Y-%m-%d %H')
+# daily_mean = df.groupby('date-hour')['Pram'].mean().reset_index()
+# daily_mean['date-hour'] = pd.to_datetime(daily_mean['date-hour'])  # Convert 'date' back to datetime
+# daily_mean['Hours_Since_Given_Date'] = (daily_mean['date-hour'] - daily_mean['date-hour'].iloc[0]).dt.total_seconds()/3600
+# daily_mean_df = pd.concat([daily_mean['Hours_Since_Given_Date'],daily_mean['Pram']],axis=1)
 
 # Cluster data
 agg_clustering = cluster.AgglomerativeClustering(n_clusters=13,linkage='single')
 daily_mean_df['cluster_label'] = agg_clustering.fit_predict(daily_mean_df)
+daily_mean_df['date'] = daily_mean['date']
 
 plt.figure()
 ax = plt.gca()
-plt.scatter(daily_mean['date-hour'], daily_mean_df['Pram'], c=daily_mean_df['cluster_label'], marker='o', edgecolor='black', s=50, cmap='viridis')
-plt.title('Agglomerative Clustering Results')
+plt.scatter(daily_mean['date'], daily_mean_df['Pram'], c=daily_mean_df['cluster_label'], marker='o', edgecolor='black', s=50, cmap='viridis')
+plt.title('Agglomerative Clustering Results (Daily Mean)')
 plt.xlabel('Datetime')
 plt.ylabel('Pram')
-# ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
 plt.show()
 
 
@@ -95,17 +96,65 @@ def kld_series(time_series):
     kld_value = calculate_kld(pin, pout)
     return kld_value
 
+def kld(time_series):
+    kin_list = []
+    kout_list = []
+    n = len(time_series)
+    for i in range(n):
+        kin = 0
+        kout= 0
+        for j in range(i+1,n): # kout
+            if time_series[j] < time_series[i]:
+                kout += 1
+            else:
+                kout += 1
+                break
+        for k in range(i-1,-1,-1): # kin
+            if time_series[k] < time_series[i]:
+                kin += 1
+            else:
+                kin+=1
+                break
+        kin_list.append(kin)
+        kout_list.append(kout)
+    pin = []
+    pout = []
+    max_num = max([max(kin_list),max(kin_list)])
+    for i in range(max_num):
+        pin.append(kin_list.count(int(i))/len(kin_list))
+    for i in range(max_num):
+        pout.append(kout_list.count(int(i))/len(kout_list))
+    # plt.figure()
+    # plt.scatter(np.arange(0,len(pin),1),pin)
+    # plt.scatter(np.arange(0,len(pout),1),pout)
+    # plt.yscale('log')
+    # plt.xlim(0,10)
+    entropy = sum([pout[a]*np.log10(pout[a]/pin[a]) for a in range(len(pin)) if pin[a] != 0 and pout[a] != 0])
+    return entropy
 
 # print(daily_mean_df['cluster_label'].unique())
-
+'''
 kld_list = []
 for i in daily_mean_df['cluster_label'].unique():
     df_in_loop = daily_mean_df[(daily_mean_df['cluster_label'] == int(i))]
     df_in_loop = df_in_loop.drop('cluster_label', axis=1)
     kld_value = kld_series(np.array(df_in_loop['Pram']))
     kld_list.append(kld_value)
+'''
+kld_list = [] 
+chosen_dates = []
+for i in daily_mean_df['date']:
+    df_in_loop = df[(df['date'] == i)]
+    chosen_dates.append(i)
+    kld_value = kld(np.array(df_in_loop['Pram']))
+    kld_list.append(kld_value)
+    print(i, kld_value)
+print(kld_list)
 
 plt.figure()
-plt.plot(kld_list,'-o',color='black')
+plt.title('Visibility-Graph Analysis')
+plt.ylabel('KLD Distance')
+plt.xlabel('Date')
+plt.plot(chosen_dates,kld_list,'-o',color='black')
 plt.show()
 
