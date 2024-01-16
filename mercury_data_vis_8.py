@@ -23,6 +23,8 @@ def prelim_data(df,select=False):
     df = df[(df['Pram'] != 0)]
     df['date'] = df['datetime'].dt.date
     df.sort_values('datetime',inplace=True)
+    k_value = 50
+    df['Rstdoff'] = k_value * df['Pram']**(-1/6) / 2439.7 # in unit of radius of Mercury R_M
     return df
 
 def time_select(df,b,e):
@@ -148,6 +150,41 @@ def skin_depth_total(omega,low_bound = False):
             break
     return sum(depths)
 
+def attenuation_total(omega,power,low_bound=False,alldata=False):
+    # layer_widths = [100,260,100,200,1740]
+    radii = np.array([2400,2300,2040,1940,1740,0])
+    layer_depth = 2400-radii
+    if low_bound == False:
+        index = 1
+    else:
+        index = 0
+    threshold = 0.2 * 1e-1
+    # threshold = 0.2 * power
+    depths = 0
+    last_atten = [power]
+    all_z = []
+    all_atten = []
+    for i in range(len(radii)-1):
+        z = np.linspace(layer_depth[i],layer_depth[i+1],1000)
+        depth = skin_depth(radial_conductivity_heyner(radii[i])[index],omega=omega) 
+        atten = last_atten[-1] * np.exp(-z/depth)
+        zz = z[0:-2]
+        all_z = all_z + list(zz)
+        all_atten = all_atten + list(last_atten[-1] * np.exp(-zz/depth))
+        if atten[-1] >= threshold:
+            depths = layer_depth[i]
+            last_atten.append(atten[-1])
+        else:
+            for j in range(len(z)):
+                if atten[j] < threshold:
+                    depths = z[j]
+                    break
+            break
+    if alldata == False:
+        return depths
+    else:
+        return depths, all_z, all_atten
+
 
 if craft_num == 2:
     year_range = range(1976,1979+1)
@@ -192,52 +229,84 @@ plt.legend()
 '''
 ##########################################
 df1_continuous_select = continuous_periods_with_dist(df1,thres=10,leng=1000)
-print(len(df1_continuous_select))
+# df1_continuous_select = [
+#     [pd.to_datetime('1978-04-12'),pd.to_datetime('1978-04-23')],
+#     [pd.to_datetime('1979-05-25'),pd.to_datetime('1979-06-01')],
+#     [pd.to_datetime('1977-04-01'),pd.to_datetime('1977-04-05')]
+#     ]
+# print(len(df1_continuous_select))
 # begintime = '1979-05-20 00:00:00'
 # endtime = '1979-06-05 23:59:59'
 for i in range(len(df1_continuous_select)):
     num = i
     begintime = df1_continuous_select[num]['datetime'].iloc[0]
     endtime = df1_continuous_select[num]['datetime'].iloc[-1]
+    # begintime = df1_continuous_select[num][0]
+    # endtime = df1_continuous_select[num][1]
     df1_select = time_select(df1, begintime, endtime)
-    df1_select_lp = low_pass(df1_select, 'Pram')
-    df1_select_lp_2 = low_pass(df1_select, 'Pram',f=0.2)
+    df1_select_lp = low_pass(df1_select, 'Rstdoff')
+    df1_select_lp_2 = low_pass(df1_select, 'Rstdoff',f=0.2)
+
     # FT 
-    ft_df1 = Lomb_Scargle(df1_select,'Pram')
-    ft_df1_lp = Lomb_Scargle(df1_select,'Pram',lowpass=True,y=df1_select_lp_2)
+    ft_df1 = Lomb_Scargle(df1_select,'Rstdoff')
+    ft_df1_lp = Lomb_Scargle(df1_select,'Rstdoff',lowpass=True,y=df1_select_lp_2)
+
     # skin depth
-    freq_dominant = ft_df1_lp[0][np.argmax(ft_df1_lp[1][:100])]
-    skindepth = skin_depth_total(freq_dominant*2*np.pi)
+    # peaks,_ = signal.find_peaks(ft_df1[1],height=0.5e-1,distance=10)
+    # freq_dominant = ft_df1_lp[0][peaks][np.argmax(ft_df1_lp[1][peaks])]
+    # skindepth = skin_depth_total(freq_dominant*2*np.pi)
+    # skindepths = np.array([skin_depth_total(ft_df1[0][p]*2*np.pi) for p in peaks])
+    skindepthboundary = np.array([skin_depth_total(a*2*np.pi) for a in np.logspace(-8,0,500)])
+    signal_depth = np.array([attenuation_total(2*np.pi*ft_df1[0][a],ft_df1[1][a]) for a in range(len(ft_df1[0]))])
+
     # plot
-    plt.figure(figsize=(10,8))
+    fig = plt.figure(figsize=(12,8))
     # plt.suptitle(r'$P_{ram}$ ' + 'and Lomb-Scargle Periodogram')
-    plt.suptitle(str(begintime) +' - '+ str(endtime) +', Length = ' +str(endtime-begintime) + f', skin depth = {skindepth:2f}' + ' (km)')
-    plt.subplot(2,1,1)
-    ax = plt.gca()
-    plt.ylabel(r'$P_{ram} (Pa)$')
+    fig.suptitle(str(begintime) +' - '+ str(endtime) +', Length = ' +str(endtime-begintime))# + f', skin depth = {skindepth:2f}' + ' (km)')
+    ax1 = plt.subplot2grid((2,2),(0,0))
+    ax1 = plt.gca()
+    # plt.ylabel(r'$P_{ram} (Pa)$')
+    plt.ylabel(r'$R_{stdoff}$' + r' $(R_M)$')
     plt.xlabel('Datetime')
-    plt.plot(df1_select['datetime'],df1_select['Pram'],'-',color='black',label='Original')
+    plt.plot(df1_select['datetime'],df1_select['Rstdoff'],'-',color='black',label='Original')
     plt.plot(df1_select['datetime'],df1_select_lp,'-',color='cyan',label = 'Weak Low-Pass')
     plt.plot(df1_select['datetime'],df1_select_lp_2,'-',color='orange',label = 'Strong Low-Pass')
-    ax.xaxis.set_major_locator(ticker.MaxNLocator(5))
+    ax1.xaxis.set_major_locator(ticker.MaxNLocator(5))
     plt.legend()
-    plt.subplot(2,1,2)
+    ax2 = plt.subplot2grid((2,2),(1,0))
     # plt.title('Lomb-Scargle Periodogram')
-    plt.ylabel('Lomb-Scargle Power')
+    plt.ylabel('Lomb-Scargle Power ')#() + r'$(Pa^2Hz^{-1})$')
     plt.xlabel('Frequency (Hz)')
     plt.plot(ft_df1[0],ft_df1[1],'-',color='black',label='Original')
-    plt.plot(ft_df1_lp[0],ft_df1_lp[1],'-',color='orange',label='Strong Low-pass')
+    # plt.plot(ft_df1_lp[0],ft_df1_lp[1],'-',color='orange',label='Strong Low-pass')
     plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/40.5,linestyles='dashed',colors='grey',label='40.5 seconds')
     plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/3600,linestyles='dashed',colors='green',label='1 hour')
     plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/86400/(4/24),linestyles='dashed',colors='deepskyblue',label='4 hours')
-    plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/86400/(9/24),linestyles='dashed',colors='darkblue',label='9 hours')
-    plt.plot(freq_dominant,max(ft_df1_lp[1][:100]),'.',color='red')
+    plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/86400,linestyles='dashed',colors='darkblue',label='1 day')
+    # plt.plot(freq_dominant,max(ft_df1_lp[1][:100]),'.',color='red')
+    # plt.plot(ft_df1[0][peaks],ft_df1[1][peaks],'.',color='red')
     # plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/86400,linestyles='dashed',colors='red',label='1 day')
     # plt.vlines(ymin=min(ft_df1[1]),ymax=max(ft_df1[1]),x=1/86400/7,linestyles='dashed',colors='blue',label='7 day')
     plt.ticklabel_format(axis='both',style='sci',scilimits=(0,0))
     plt.xscale('log')
     # plt.yscale('log')
     plt.legend()
+    ax3 = plt.subplot2grid((2,2),(0,1),rowspan=2)
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Radius (km)')
+    plt.fill_between(y1=2400,y2=2300,x=np.linspace(0,max(ft_df1[0]),100),color='grey',label='Crust',alpha=0.7)
+    plt.fill_between(y1=2300,y2=2040,x=np.linspace(0,max(ft_df1[0]),100),color='brown',label='Mantle',alpha=0.95)
+    plt.fill_between(y1=2040,y2=1940,x=np.linspace(0,max(ft_df1[0]),100),color='brown',alpha=0.93)
+    plt.fill_between(y1=1940,y2=1740,x=np.linspace(0,max(ft_df1[0]),100),color='brown',alpha=0.91)
+    plt.fill_between(y1=1740,y2=1440,x=np.linspace(0,max(ft_df1[0]),100),color='red',label='Core',alpha=0.7)
+    plt.plot(np.logspace(-8,0,500),2400-skindepthboundary,'--',color='royalblue',alpha=0.7,label='Skin Depth')
+    plt.plot(ft_df1[0],2400-signal_depth,'-',color='black',label='Signal Depth')
+    # for p in range(len(peaks)):
+    #     plt.vlines(x=ft_df1[0][peaks[p]],ymax=2400,ymin=2400-skindepths[p],color='black',linestyles='solid')
+    plt.xscale('log')
+    plt.ylim(1440,2450)
+    plt.xlim(min(ft_df1[0]),max(ft_df1[0]))
+    plt.legend(loc='best')
     plt.show()
 
 '''
