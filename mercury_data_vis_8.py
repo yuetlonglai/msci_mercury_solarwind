@@ -24,7 +24,7 @@ def prelim_data(df,select=False):
     df['date'] = df['datetime'].dt.date
     df.sort_values('datetime',inplace=True)
     k_value = 50
-    df['Rstdoff'] = k_value * df['Pram']**(-1/6) / 2439.7 # in unit of radius of Mercury R_M
+    df['Rstdoff'] = 1+k_value * df['Pram']**(-1/6) / 2439.7 # in unit of radius of Mercury R_M
     return df
 
 def time_select(df,b,e):
