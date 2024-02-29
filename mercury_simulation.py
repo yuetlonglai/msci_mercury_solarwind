@@ -25,7 +25,7 @@ class Mercury_B_induced_sim:
 
     def generate_sphere_points(self,radius, num_points, spherical=False):
         """
-        Generate points on the surface of a sphere using the Fibonacci lattice method. (ChatGBT)
+        Generate points on the surface of a sphere using the Fibonacci lattice method. (ChatGPT)
 
         :param radius: Radius of the sphere.
         :param num_points: Number of points to generate.
@@ -75,7 +75,12 @@ class Mercury_B_induced_sim:
         by = br*np.sin(t)*np.sin(p) + btheta*np.cos(t)*np.sin(p) + bphi*np.cos(p)
         bz = br*np.cos(t) - btheta*np.sin(t)
         return bx,by,bz
-
+    def spherical_to_cartesian(self,r,t,p):
+        """ coordinate transformation from spherical to cartesian coordinates """
+        x = r*np.sin(t)*np.cos(p)
+        y = r*np.sin(t)*np.sin(p)
+        z = r*np.cos(t)
+        return x,y,z
     def bfield_interpolation(self,xval,yval,Bval,num_interp):
         """ interpolation of the bfield data on the surface to get more data between points and plot """
         # for plotting
@@ -140,6 +145,7 @@ class Mercury_B_induced_sim:
 
     def bfield_plot(self,convert_to_cartesian=False,label='spherical'):
         """ plotting any magnetic field data on a surface """
+        pram_start = self.bfield_list[0][4]
         for i in range(len(self.bfield_list)):
             Bx, By, Bz, b_magnitude, pram, rss = self.bfield_list[i]
             if convert_to_cartesian == True:
@@ -153,7 +159,7 @@ class Mercury_B_induced_sim:
             subplot_positions = [[0,0],[0,1],[1,0],[1,1]]
             # plotting 3d plot of all points and the field vector
             fig,ax = plt.subplots(2,2,figsize=(10,7),subplot_kw={"projection": "mollweide"})
-            fig.suptitle(r'$P_{ram} = $' + f'{pram:.3f} (nPa), ' + r'$R_{SS} = $' + f'{rss:.3f} '+r'($R_{M}$)')
+            fig.suptitle(r'$\delta P_{ram} = $' + f'{pram-pram_start:.3f} (nPa), ' + r'$R_{SS} = $' + f'{rss:.3f} '+r'($R_{M}$)')
             # coordinates = ax[0,0].scatter(long,lat,c=b_magnitude,cmap='seismic')
             # coordinates_x=ax[0,1].scatter(long,lat,c=Bx,cmap='seismic')
             # coordinates_y=ax[1,0].scatter(long,lat,c=By,cmap='seismic')
@@ -191,7 +197,7 @@ class Mercury_B_induced_sim:
         f2 = special.lpmv(m,n,x2)
         return (f2-f1)/(2*dt)
  
-    def magnetic_field_analytic(self, r, theta, phi, a, g_coeff, h_coeff, fixed_param=True):
+    def magnetic_field_analytic(self, r, theta, phi, a, g_coeff, h_coeff, fixed_param=True,induced=False):
         """ Magnetic Field Function """
         # Initialize the magnetic field components
         B_r = 0
@@ -212,14 +218,24 @@ class Mercury_B_induced_sim:
             if len(g_coeff) == 4:
                 g_coeff[3][0] = g03
         # Calculate the field components
-        for n in range(1, len(g_coeff)):  # n = 1 for dipole, n = 2 for quadrupole
-            for m in range(0, n+1):
-                # Radial component
-                B_r += (n + 1) * (a/r)**(n+2) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * special.lpmv(m, n, np.cos(theta))
-                # Theta component
-                B_theta += -(a/r)**(n+2) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * self.derivative_lpmv(m,n,theta)  
-                # Phi component
-                B_phi += -1/(np.sin(theta)) * (a/r)**(n+2) * m * (g_coeff[n][m] * np.sin(m*phi) - h_coeff[n][m] * np.cos(m*phi)) * special.lpmv(m, n, np.cos(theta))
+        if induced == False:
+            for n in range(1, len(g_coeff)):  # n = 1 for dipole, n = 2 for quadrupole
+                for m in range(0, n+1):
+                    # Radial component
+                    B_r += -(n) * (r/a)**(n-1) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * special.lpmv(m, n, np.cos(theta))
+                    # Theta component
+                    B_theta += (r/a)**(n-1) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * self.derivative_lpmv(m,n,theta)  
+                    # Phi component
+                    B_phi += 1/(np.sin(theta)) * (r/a)**(n-1) * m * (g_coeff[n][m] * np.sin(m*phi) + h_coeff[n][m] * np.cos(m*phi)) * special.lpmv(m, n, np.cos(theta))
+        else:
+            for n in range(1, len(g_coeff)):  # n = 1 for dipole, n = 2 for quadrupole
+                for m in range(0, n+1):
+                    # Radial component
+                    B_r += (n+1) * (a/r)**(n+2) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * special.lpmv(m, n, np.cos(theta))
+                    # Theta component
+                    B_theta += (a/r)**(n+2) * (g_coeff[n][m] * np.cos(m*phi) + h_coeff[n][m] * np.sin(m*phi)) * self.derivative_lpmv(m,n,theta)  
+                    # Phi component
+                    B_phi += 1/(np.sin(theta)) * (a/r)**(n+2) * m * (g_coeff[n][m] * np.sin(m*phi) - h_coeff[n][m] * np.cos(m*phi)) * special.lpmv(m, n, np.cos(theta))
         return B_r, B_theta, B_phi
     
     def bfield_rms_residual(self,coeffs, r, t, p, br_actual, bt_actual, bp_actual):
@@ -270,8 +286,8 @@ class Mercury_B_induced_sim:
             residual_list.append(self.bfield_rms_residual(coeffs,self.R,self.theta,self.phi,bra,bta,bpa))
             # reshape
             g_coeff, h_coeff = np.array(coeffs).reshape((2,int(len(coeffs)/2)))[0], np.array(coeffs).reshape((2,int(len(coeffs)/2)))[1]
-            g_coeff = np.array(g_coeff).reshape((int(np.sqrt(len(g_coeff))),int(np.sqrt(len(g_coeff)))))
-            h_coeff = np.array(h_coeff).reshape((int(np.sqrt(len(h_coeff))),int(np.sqrt(len(h_coeff)))))
+            g_coeff = list(np.array(g_coeff).reshape((int(np.sqrt(len(g_coeff))),int(np.sqrt(len(g_coeff))))))
+            h_coeff = list(np.array(h_coeff).reshape((int(np.sqrt(len(h_coeff))),int(np.sqrt(len(h_coeff))))))
             self.minimisation_result.append([g_coeff,h_coeff])
             # recalculate the magnetic field according to the minimised gauss coefficients values
             minimised_field = self.magnetic_field_analytic(self.R,self.theta,self.phi,self.A,g_coeff,h_coeff)
@@ -279,7 +295,8 @@ class Mercury_B_induced_sim:
             # save the field that the minimised gauss coefficients give
             minimised_field_list.append([minimised_field[0],minimised_field[1],minimised_field[2],minimised_field_mag,self.bfield_list[i][4],self.bfield_list[i][5]])
         self.bfield_list = minimised_field_list
-        print(f'Mean Residual = {np.mean(residual_list)} (nT)')
+        print(f'Mean Residual = {np.array(residual_list).mean()} (nT)')
+        # print(f'Residuals = {np.array(residual_list)} (nT)')
         return self
     
     def inducing_to_induced_coeff(self,gh_coeff,ratio=False):
@@ -289,9 +306,9 @@ class Mercury_B_induced_sim:
         for n in range(len(gh_coeff)):
             for m in range(len(gh_coeff[n])):
                 # transfer function, under the assumption of steep conductivity change
-                induced_coeff = -1 * n/(n+1) * (self.A)**(2*n+1) * gh_coeff[n][m] 
+                induced_coeff = n/(n+1) * (self.A)**(2*n+1) * gh_coeff[n][m] 
                 gh_coeff_induced.append(induced_coeff)
-                induced_ratio.append(n/(n+1) * (self.A)**(2*n+1))
+                induced_ratio.append(abs(n/(n+1) * (self.A)**(2*n+1)))
         gh_coeff_induced = np.array(gh_coeff_induced).reshape((int(len(gh_coeff)),int(len(gh_coeff))))
         induced_ratio = np.array(induced_ratio).reshape((int(len(gh_coeff)),int(len(gh_coeff))))
         # print(induced_ratio)
@@ -307,61 +324,78 @@ class Mercury_B_induced_sim:
         for i in range(len(self.minimisation_result)):
             g_coeff_induced, h_coeff_induced = self.inducing_to_induced_coeff(self.minimisation_result[i][0]), self.inducing_to_induced_coeff(self.minimisation_result[i][1])
             self.induced_coeff_list.append([g_coeff_induced,h_coeff_induced])
-            br, bt, bp = self.magnetic_field_analytic(self.R,self.theta,self.phi,self.A,g_coeff_induced,h_coeff_induced)
+            br, bt, bp = self.magnetic_field_analytic(self.R,self.theta,self.phi,self.A,g_coeff_induced,h_coeff_induced,induced=True)
             self.bfield_induced_list.append([br,bt,bp,np.sqrt(np.array(bt)**2+np.array(br)**2+np.array(bp)**2),self.bfield_list[i][4],self.bfield_list[i][5]])
         self.bfield_list = self.bfield_induced_list
+        # self.Z = self.Z - 479/self.R_M # offsetting the magnetic dipole centre from planet's centre since they're different
+        # ratioes = self.inducing_to_induced_coeff(self.minimisation_result[i][0],ratio=True)[1]
+        # print(f'Induced Ratio: g01 = {ratioes[1][0]:.3f}, g11 = {ratioes[1][1]:.3f}, g12 = {ratioes[2][1]:.3f}, g03 = {ratioes[3][0]:.3f}')
         return self
     
+    def spacecraft_simulation(self,coordinates,plotting=True):
+        """ Simulate the spacecraft trajectory and its measurement """
+        self.bfield_data_log = []
+        for t in range(len(self.induced_coeff_list)):
+            br_inducing, bt_inducing, bp_inducing = self.magnetic_field_analytic(coordinates[t][0],coordinates[t][1],coordinates[t][2],self.A,self.minimisation_result[t][0],self.minimisation_result[t][1])
+            br_induced, bt_induced, bp_induced = self.magnetic_field_analytic(coordinates[t][0],coordinates[t][1],coordinates[t][2],self.A,self.induced_coeff_list[t][0],self.induced_coeff_list[t][1],induced=True)
+            self.bfield_data_log.append([br_induced,bt_induced,bp_induced,np.sqrt(br_induced**2+bt_induced**2+bp_induced**2),np.sqrt(br_induced**2+bt_induced**2+bp_induced**2)/np.sqrt(br_inducing**2+bt_inducing**2+bp_inducing**2)])
+        print(np.array(self.bfield_data_log)[:,3])
+        if plotting == True:
+            fig, ax = plt.subplots(1,1,figsize=(7,7),subplot_kw={"projection":"3d"})
+            ax.set_xlabel(r'x $(R_M)$')
+            ax.set_ylabel(r'y $(R_M)$')
+            ax.set_zlabel(r'z $(R_M)$')
+            # ax.scatter([0],[0],[0],color='grey',s=100,label='Mercury')
+            # p = np.linspace(0, 2*np.pi, 100)
+            # t = np.linspace(0, np.pi, 100)
+            # sphere_x = 1 * np.outer(np.cos(p), np.sin(t))
+            # sphere_y = 1 * np.outer(np.sin(p), np.sin(t))
+            # sphere_z = 1 * np.outer(np.ones(np.size(p)), np.cos(t))
+            # ax.plot_surface(sphere_x,sphere_y,sphere_z,color='grey')
+            sphere = self.generate_sphere_points(0.9,1000)
+            sphere_x,sphere_y,sphere_z = sphere[:,0],sphere[:,1],sphere[:,2]
+            ax.scatter(sphere_x,sphere_y,sphere_z,s=100,color='grey',label='Mercury',zorder=1)
+            coord_x, coord_y, coord_z = self.spherical_to_cartesian(coordinates[:,0],coordinates[:,1],coordinates[:,2])
+            ax.plot(coord_x,coord_y,coord_z,'-',color='black',label='Spacecraft',zorder=10)
+            ax.set_xlim(-4,4)
+            ax.set_ylim(-4,4)
+            ax.set_zlim(-4,4)
+            fig.legend()
+            # fig.tight_layout()
+            plt.show()
+        return self
     
-
-
-
-    # def magnetic_field_analytic(self, r, theta, phi, a, g01, g11, g02, g12, g22, h01, h11, h02, h12, h22):
-    #     # Define the coefficients in a dictionary for easier access
-    #     g_coeff = {(1,0): g01, (1,1): g11, (2,0): g02, (2,1): g12, (2,2): g22}
-    #     h_coeff = {(1,0): h01, (1,1): h11, (2,0): h02, (2,1): h12, (2,2): h22}  # h(0, l) is zero
-    #     # Initialize the magnetic field components
-    #     B_r = 0
-    #     B_theta = 0
-    #     B_phi = 0
-    #     # Calculate the field components
-    #     for n in range(1, 2):  # n = 1 for dipole, n = 2 for quadrupole
-    #         for m in range(0, n+1):
-    #             # Radial component
-    #             B_r += (n + 1) * (a/r)**(n+2) * (g_coeff[(n,m)] * np.cos(m*phi) + h_coeff[(n,m)] * np.sin(m*phi)) * special.lpmv(m, n, np.cos(theta))
-    #             # Theta component
-    #             B_theta += -(a/r)**(n+2) * (g_coeff[(n,m)] * np.cos(m*phi) + h_coeff[(n,m)] * np.sin(m*phi)) * self.derivative_lpmv(m,n,theta)  
-    #             # Phi component
-    #             B_phi += 1/(r * np.sin(theta)) * (a/r)**(n+2) * m * (g_coeff[(n,m)] * np.sin(m*phi) - h_coeff[(n,m)] * np.cos(m*phi)) * special.lpmv(m, n, np.cos(theta))
-    #     return B_r, B_theta, B_phi
-    
-    # def bfield_rms_residual(self,coeffs, r, t, p, br_actual, bt_actual, bp_actual):
-    #     """ calculate the root-mean-square value of the magnetic field difference according to model and actual data """
-    #     g01, g11, g02, g12, g22, h01, h11, h02, h12, h22  = coeffs[0],coeffs[1],coeffs[2],coeffs[3],coeffs[4],coeffs[5],coeffs[6],coeffs[7],coeffs[8],coeffs[9]
-    #     br_model, bt_model, bp_model = self.magnetic_field_analytic(r,t,p,self.A,g01, g11, g02, g12, g22, h01, h11, h02, h12, h22)
-    #     return np.sqrt(np.sum(((br_model-br_actual)**2 + (bt_model-bt_actual)**2 + (bp_model-bp_actual)**2))/3/len(br_actual))
-    # def bfield_coefficient_minimisation(self,init_guess):
-    #     """ 
-    #     minimise the root-mean-square of the magnetic field difference to find the gauss coefficient that corresponds to the data, 
-    #     can use this function to feed bfield to bfield_plot() to plot 
-    #     """
-    #     self.minimisation_result = []
-    #     minimised_field_list = []
-    #     for i in range(len(self.bfield_list)):
-    #         bra, bta, bpa = self.bfield_list[i][0],self.bfield_list[i][1],self.bfield_list[i][2] # current bfield data
-    #         # minimise
-    #         minimise = optimize.minimize(self.bfield_rms_residual,x0=init_guess,args=(self.R,self.theta,self.phi,bra,bta,bpa))
-    #         coeffs = minimise.x # minimised gauss coefficient for the magnetosphere
-    #         self.minimisation_result.append(coeffs)
-    #         # recalculate the magnetic field according to the minimised gauss coefficients values
-    #         minimised_field = self.magnetic_field_analytic(self.R,self.theta,self.phi,self.A,coeffs[0],coeffs[1],coeffs[2],coeffs[3],coeffs[4],coeffs[5],coeffs[6],coeffs[7],coeffs[8],coeffs[9])
-    #         minimised_field_mag = np.sqrt(np.array(minimised_field[0])**2 + np.array(minimised_field[1])**2 + np.array(minimised_field[2])**2)
-    #         # save the field that the minimised gauss coefficients give
-    #         minimised_field_list.append([minimised_field[0],minimised_field[1],minimised_field[2],minimised_field_mag,self.bfield_list[i][4],self.bfield_list[i][5]])
-    #     self.bfield_list = minimised_field_list
+    # def bfield_plot_3D(self):
+    #     """ Plotting the magnetic field lines in 3D """
+    #     cordinates = self.generate_sphere_points(1, 50)
+    #     X = cordinates[:,0]
+    #     Y = cordinates[:,1]
+    #     Z = cordinates[:,2] - 479/self.R_M # offsetting the magnetic dipole centre from planet's centre since they're different
+    #     # changing it to lattitude and longtitude to plot in hte mollweide projection 
+    #     R, theta, phi = self.cartesian_to_spherical(X, Y, Z)
+    #     coordinates = np.column_stack((R,theta,phi))
+    #     for i in range(1,len(self.induced_coeff_list)-1):
+    #         field_lines = []
+    #         for j in range(len(coordinates)):
+    #             field_line = []
+    #             field_line.append([coordinates[j][0],coordinates[j][1],coordinates[j][2]])
+    #             for k in range(100):
+    #                 alpha = 1
+    #                 br, bt, bp = self.magnetic_field_analytic(field_line[-1][0],field_line[-1][1],field_line[-1][2],self.A,self.induced_coeff_list[i][0],self.induced_coeff_list[i][1])
+    #                 # new point coordinates in spherical, need to change to cartesian for plotting
+    #                 new_r = field_line[-1][0]+np.sqrt(alpha**2 - (field_line[-1][0]*bt/br)**2 - (field_line[-1][0]*bp/br)**2),
+    #                 new_theta = field_line[-1][1]+bt/br,
+    #                 new_phi = field_line[-1][2]+bp/br
+    #                 next_point = [new_r*np.sin(new_phi)*np.cos(new_theta),new_r*np.sin(new_phi)*np.sin(new_theta),new_r*np.cos(new_phi)]                
+    #                 field_line.append(next_point)
+    #             field_lines.append(field_line)
+    #         fig ,ax = plt.subplots(2,2,figsize=(10,7),subplot_kw={"projection": "3d"})
+    #         for lines in field_lines:
+    #             lines_x = lines[:,0]
+    #             lines_y = lines[:,1]
+    #             lines_z = lines[:,2]
+    #             ax.plot(lines_x,lines_y,lines_z,'-',color='black')
+    #         plt.show()
     #     return self
-    # 
-    # def bfield_fitting(self,coeffs,r,t,p):
-    #     """ Optimising and fitting the bfield function to the data """
-    #     g01, g11, g02, g12, g22, h01, h11, h02, h12, h22  = coeffs[0],coeffs[1],coeffs[2],coeffs[3],coeffs[4],coeffs[5],coeffs[6],coeffs[7],coeffs[8],coeffs[9]
-    #     least_squares_field = cost.LeastSquares()
+            
+  

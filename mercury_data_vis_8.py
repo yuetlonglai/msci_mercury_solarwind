@@ -244,12 +244,12 @@ for i in range(len(df1_continuous_select)):
     # begintime = df1_continuous_select[num][0]
     # endtime = df1_continuous_select[num][1]
     df1_select = time_select(df1, begintime, endtime)
-    df1_select_lp = low_pass(df1_select, 'Rstdoff')
-    df1_select_lp_2 = low_pass(df1_select, 'Rstdoff',f=0.2)
+    df1_select_lp = low_pass(df1_select, 'Pram')
+    df1_select_lp_2 = low_pass(df1_select, 'Pram',f=0.2)
 
     # FT 
-    ft_df1 = Lomb_Scargle(df1_select,'Rstdoff')
-    ft_df1_lp = Lomb_Scargle(df1_select,'Rstdoff',lowpass=True,y=df1_select_lp_2)
+    ft_df1 = Lomb_Scargle(df1_select,'Pram')
+    ft_df1_lp = Lomb_Scargle(df1_select,'Pram',lowpass=True,y=df1_select_lp_2)
 
     # skin depth
     # peaks,_ = signal.find_peaks(ft_df1[1],height=0.5e-1,distance=10)
@@ -265,10 +265,10 @@ for i in range(len(df1_continuous_select)):
     fig.suptitle(str(begintime) +' - '+ str(endtime) +', Length = ' +str(endtime-begintime))# + f', skin depth = {skindepth:2f}' + ' (km)')
     ax1 = plt.subplot2grid((2,2),(0,0))
     ax1 = plt.gca()
-    # plt.ylabel(r'$P_{ram} (Pa)$')
-    plt.ylabel(r'$R_{stdoff}$' + r' $(R_M)$')
+    plt.ylabel(r'$P_{ram} (Pa)$')
+    # plt.ylabel(r'$R_{stdoff}$' + r' $(R_M)$')
     plt.xlabel('Datetime')
-    plt.plot(df1_select['datetime'],df1_select['Rstdoff'],'-',color='black',label='Original')
+    plt.plot(df1_select['datetime'],df1_select['Pram'],'-',color='black',label='Original')
     plt.plot(df1_select['datetime'],df1_select_lp,'-',color='cyan',label = 'Weak Low-Pass')
     plt.plot(df1_select['datetime'],df1_select_lp_2,'-',color='orange',label = 'Strong Low-Pass')
     ax1.xaxis.set_major_locator(ticker.MaxNLocator(5))
@@ -307,6 +307,7 @@ for i in range(len(df1_continuous_select)):
     plt.ylim(1440,2450)
     plt.xlim(min(ft_df1[0]),max(ft_df1[0]))
     plt.legend(loc='best')
+    plt.tight_layout()
     plt.show()
 
 '''

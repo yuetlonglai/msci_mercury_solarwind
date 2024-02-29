@@ -28,44 +28,32 @@ def time_select(df,b,e):
 # world = Mercury_B_induced_sim()
 # world.bfield_inducing([30*1e-9],cartesian=False).bfield_plot(cartesian_label=False)
 
-x=np.linspace(0,2*np.pi,10)
+num_points = 10
+x=np.linspace(0,2*np.pi,num_points)
+P = 30e-9*(np.sin(x))+40e-9
 plt.ylabel(r'$P_{ram}$ (nPa)')
-plt.plot(x,10e-9*(np.sin(x))+20e-9,'-',color='black',label='Toy Data')
+plt.plot(x,P,'-',color='black',label='Toy Data')
 plt.legend()
 plt.show()
 world2 = Mercury_B_induced_sim()
-world2_inducing = world2.delta_bfield_inducing(10e-9*(np.sin(x))+20e-9)#.bfield_plot(label='spherical_delta')
+world2_inducing = world2.delta_bfield_inducing(P)#.bfield_plot(label='spherical_delta')
 # g[n,m],h[n,m]
-# initial_guess_g = [
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0]
-# ]
-# initial_guess_h = [
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0]
-# ]
-# initial_guess_g = [
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [10.0,0.0,0.0,0.0,0.0],
-#     [0.0,10.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0]
-# ]
-# initial_guess_h = [
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0],
-#     [0.0,0.0,0.0,0.0,0.0]
-# ]
+
 initial_guess_g = np.zeros((4,4))
 initial_guess_h = np.zeros((4,4))
 initial_guess_gauss = [initial_guess_g,initial_guess_h]
 # world2_inducing.bfield_rms_residual_plot()
 world2_minimised = world2_inducing.bfield_coefficient_minimisation(initial_guess_gauss)#.bfield_plot(label='spherical_delta')
 # print(world2_minimised.minimisation_result)
-world2_induced = world2_minimised.bfield_induced().bfield_plot(label='spherical')
+world2_induced = world2_minimised.bfield_induced()#.bfield_plot(label='spherical')
+# world2_induced.bfield_plot_3D()
+
+
+# trajectory_r = 2*np.cosh(np.linspace(-np.pi/2,np.pi/2,num_points))
+trajectory_r = 2*np.ones(num_points)
+trajectory_theta = np.ones(num_points)*np.pi/2
+trajectory_phi = np.linspace(-np.pi/2,np.pi/2,num_points)
+# trajectory_phi = np.linspace(0,2*np.pi,num_points)
+# trajectory_r = 4*(1-0.5**2)/(1+0.5*np.cos(trajectory_phi))
+trajectory = np.column_stack([trajectory_r,trajectory_theta,trajectory_phi])
+world2_induced.spacecraft_simulation(trajectory,plotting=True)
